@@ -24,8 +24,8 @@ print()
 # 2. TACH DAC TRUNG VA NHAN
 # =====================================================
 
-X = data.drop("MEDV", axis=1)   # Dac trung
-y = data["MEDV"]                # Gia nha trung binh
+X = data.drop("MEDV", axis=1)   # Dac trung -> "MEDV": ten cot, axis=1 tach theo cot
+y = data["MEDV"]                # Gia nha trung binh            axis=0 tach theo hang
 
 # =====================================================
 # 3. CHIA DU LIEU 80% - 20%
@@ -83,6 +83,8 @@ scaler = MinMaxScaler()
 
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
+
+#Chỉ có fit trên tập train, không fit trên tập test để tránh rò rỉ dữ liệu
 
 # =====================================================
 # 6. KNN HOI QUY - SAU KHI CHUAN HOA

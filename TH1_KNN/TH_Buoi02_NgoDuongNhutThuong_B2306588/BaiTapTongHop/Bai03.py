@@ -1,25 +1,23 @@
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-# =====================================================
-# a. DOC DU LIEU
-# =====================================================
+# DOC DU LIEU
 
-data = pd.read_csv("D:\Lap trinh\MayHocUngDung\TH1_KNN\Data\winequality-white.csv", sep=';')
+data = pd.read_csv("Data\winequality-white.csv", sep=';')
 
 print("===== THONG TIN DU LIEU =====")
 print(data.head())
 print("So dong, so cot:", data.shape)
 print()
 
-# =====================================================
-# b. PHAN TICH DU LIEU
-# =====================================================
+# PHAN TICH DU LIEU
+
 
 print("===== THONG KE CO BAN =====")
 print(data.describe())
@@ -29,100 +27,58 @@ print("===== PHAN BO NHAN (quality) =====")
 print(data['quality'].value_counts())
 print()
 
-# =====================================================
-# Chuyen ve bai toan PHAN LOAI
-# quality >= 6 -> ruou tot (1)
-# quality < 6  -> ruou khong tot (0)
-# =====================================================
+# Chuan bi du lieu
 
-data['quality_label'] = data['quality'].apply(lambda x: 1 if x >= 6 else 0)
+X = data.drop("quality", axis=1)
+y = data["quality"]
 
-X = data.drop(['quality', 'quality_label'], axis=1)
-y = data['quality_label']
+# CHIA DU LIEU: K_fold k=10
 
-# =====================================================
-# c. CHIA DU LIEU: 8 PHAN TRAIN - 2 PHAN TEST (80% - 20%)
-# =====================================================
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y
-)
-
-print("So mau tap test:", len(y_test))
-print("Cac gia tri nhan trong tap test:", np.unique(y_test))
-print()
-
-# =====================================================
-# d. KNN PHAN LOAI - k = 7 (KHONG CHUAN HOA)
-# =====================================================
+kf = KFold(n_splits=10, shuffle=True, random_state=42)
 
 knn = KNeighborsClassifier(
-    n_neighbors=7,
-    metric='minkowski',
+    n_neighbors=9,
     p=2
 )
+accuracies_knn = []
 
-knn.fit(X_train, y_train)
-y_pred = knn.predict(X_test)
+model = GaussianNB()
+accuracies_bayes = []
 
-print("==========================================")
-print("KNN - KHONG CHUAN HOA")
-print("==========================================")
+for fold, (train_idx, test_idx) in enumerate (kf.split(X), 1):
+    X_train = X.iloc[train_idx]
+    X_test = X.iloc[test_idx]
+    y_train = y.iloc[train_idx]
+    y_test = y.iloc[test_idx]
 
-print("Do chinh xac tong the:", accuracy_score(y_test, y_pred))
-print()
 
-# In 8 phan tu dau tien tap test
-print("8 phan tu dau tien tap test:")
-for i in range(8):
-    print(f"Thuc te: {y_test.iloc[i]}, Du doan: {y_pred[i]}")
+    print(f"\nFold {fold}")
+    print("So mau tap test:", len(y_test))
+    print("Cac gia tri nhan trong tap test:", np.unique(y_test))
 
-print("Do chinh xac 8 phan tu dau:",
-      accuracy_score(y_test.iloc[:8], y_pred[:8]))
-print()
+    print("Ket qua giai thuat KNN")
+    knn.fit(X_train, y_train)
+    y_pred_knn = knn.predict(X_test)
+    
+    for i in range (12):
+        print(f"{i+1}: Nhan thuc te: {y_test.iloc[i]} | Nhan du doan: {y_pred_knn[i]}")
 
-print("Ma tran phan lop:")
-print(confusion_matrix(y_test, y_pred))
-print()
+    acc_knn = accuracy_score(y_test, y_pred_knn)
+    acc_12 = accuracy_score(y_test.iloc[:12], y_pred_knn[:12])
+    accuracies_knn.append(acc_knn)
+    print("Ma tran phan lop:")
+    print(confusion_matrix(y_test, y_pred_knn))
+    print(f"Do chinh xac cua 12 ph tu dau: {acc_12:.4f}")
+    print(f"Do chinh xac cua knn: {acc_knn:.4f}")
 
-print("Bao cao chi tiet:")
-print(classification_report(y_test, y_pred))
+    print("Ket qua giai thuat Bayes")
 
-# =====================================================
-# CHUAN HOA DU LIEU MIN-MAX
-# =====================================================
+    model.fit(X_train, y_train)
+    y_pred_bayes = model.predict(X_test)
 
-scaler = MinMaxScaler()
+    acc_bayes = accuracy_score(y_test, y_pred_bayes)
+    accuracies_bayes.append(acc_bayes)
 
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+    print(f"Accuracy: {acc_bayes:.4f}")
 
-# =====================================================
-# KNN PHAN LOAI - k = 7 (SAU CHUAN HOA)
-# =====================================================
-
-knn_scaled = KNeighborsClassifier(
-    n_neighbors=7,
-    metric='minkowski',
-    p=2
-)
-
-knn_scaled.fit(X_train_scaled, y_train)
-y_pred_scaled = knn_scaled.predict(X_test_scaled)
-
-print("==========================================")
-print("KNN - SAU CHUAN HOA MIN-MAX")
-print("==========================================")
-
-print("Do chinh xac tong the:", accuracy_score(y_test, y_pred_scaled))
-print()
-
-print("Ma tran phan lop:")
-print(confusion_matrix(y_test, y_pred_scaled))
-print()
-
-print("Bao cao chi tiet:")
-print(classification_report(y_test, y_pred_scaled))
+ 
